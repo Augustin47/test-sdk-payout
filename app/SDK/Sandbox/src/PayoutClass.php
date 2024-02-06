@@ -2,9 +2,8 @@
 
 namespace App\SDK\Sandbox\src;
 
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\RequestException;
 
 class PayoutClass implements PaymentInterface
 {
@@ -44,7 +43,7 @@ class PayoutClass implements PaymentInterface
      */
     public function balance(array $payload): array
     {
-        return $this->httpRequest('/v1/balance/all', $payload, 'get');
+        return $this->httpRequest('/v1/balance/all', $payload, 'balance', 'get');
     }
 
     /**
@@ -54,7 +53,7 @@ class PayoutClass implements PaymentInterface
      */
     public function check(array $payload): array
     {
-        return $this->httpRequest('/v1/transfer/'.$payload['transaction_id'], $payload, 'get');
+        return $this->httpRequest('/v1/transfer/'.$payload['transaction_id'], $payload, 'do-check', 'get');
     }
 
     /**
@@ -66,25 +65,24 @@ class PayoutClass implements PaymentInterface
      *
      * @return array The response data from the HTTP request.
      */
-    private function httpRequest(string $url, $data = [], $method = 'post'): array
+    private function httpRequest(string $url, $data = [], $action = 'do-check', $method = 'post',): array
     {
         try {
             $responseAuth = $this->connectToMagmaSendApi();
             $responseRequest = $this->request($url, $data, $responseAuth['access_token'], $method);
-            return @$responseRequest['balance'] != null ? $this->getResponseBalance($responseRequest,
+            return $action != 'do-check' ? $this->getResponseBalance($responseRequest,
                 $data) : $this->getResponseDoAndCheck($responseRequest, $data);
-
         } catch (\Exception $e) {
             $jsonResponse = json_decode($e->getMessage(), true);
             return [
-                'status' => @$jsonResponse['code'],
+                'status' => $jsonResponse['code'] ?? 300,
                 'type' => 'DIRECT',
-                'transaction_id' => @$data['transaction_id'] ?? '',
-                'message' => @$jsonResponse['status'] ?? "FAILED",
-                'partner_transaction_id' => @$data['transaction_id'] ?? '',
-                'partner_payment_id' => @$jsonResponse['operator_transaction_id'] ?? '',
+                'transaction_id' => $data['transaction_id'] ?? '',
+                'message' => $jsonResponse['status'] ?? "FAILED",
+                'partner_transaction_id' => $data['transaction_id'] ?? '',
+                'partner_payment_id' => $jsonResponse['operator_transaction_id'] ?? '',
                 'data' => [
-                    'instruction' => @$jsonResponse['comment'] ?? ''
+                    'instruction' => $jsonResponse['comment'] ?? ''
                 ],
                 'orig_data' => $jsonResponse,
             ];
@@ -100,21 +98,24 @@ class PayoutClass implements PaymentInterface
      */
     private function connectToMagmaSendApi()
     {
-        return Cache::remember('TOKEN_CONNEXION_'.$this->credentials['email'], now()->addSeconds(68090), function () {
-            $baseUrl = $this->credentials['base_url'];
-            $email = $this->credentials['email'];
-            $password = $this->credentials['password'];
-
-            $response = Http::post($baseUrl.'/v1/oauth/login', [
-                'email' => $email,
-                'password' => $password,
+        $baseUrl = $this->credentials['base_url'];
+        $email = $this->credentials['email'];
+        $password = $this->credentials['password'];
+        $client = new Client();
+        try {
+            $response = $client->post($baseUrl.'/v1/oauth/login', [
+                'form_params' => [
+                    'email' => $email,
+                    'password' => $password,
+                ],
             ]);
-
-            $jsonResponse = $response->json();
+            $jsonResponse = json_decode($response->getBody()->getContents(), true);
+        } catch (RequestException $e) {
+            $jsonResponse = json_decode($e->getResponse()->getBody(), true);
             throw_if($jsonResponse['code'] != '00', \Exception::class, json_encode($jsonResponse));
-            return $jsonResponse;
-        });
+        }
 
+        return $jsonResponse;
     }
 
     /**
@@ -132,31 +133,43 @@ class PayoutClass implements PaymentInterface
     private function request(string $url, array $payload, string $token, string $method = 'post')
     {
         $baseUrl = $this->credentials['base_url'];
-        $builder = Http::withToken($token);
-        if ($method == 'post') {
-            $response = $builder->post($baseUrl.$url, $payload);
-        } else {
-            $response = $builder->get($baseUrl.$url, $payload);
+        $client = new Client([
+            'base_uri' => $baseUrl,
+            'headers' => [
+                'Authorization' => 'Bearer '.$token,
+            ],
+        ]);
+
+        try {
+            if ($method == 'post') {
+                $response = $client->post($url, ['json' => $payload]);
+            } else {
+                $response = $client->get($url, ['query' => $payload]);
+            }
+            $jsonResponse = json_decode($response->getBody(), true);
+        } catch (RequestException $e) {
+            $jsonResponse = json_decode($e->getResponse()->getBody(), true);
+            throw_if($jsonResponse['code'] != '00', \Exception::class, json_encode($jsonResponse));
         }
-        $jsonResponse = $response->json();
-        throw_if($jsonResponse['code'] != '00', \Exception::class, json_encode($jsonResponse));
+
         return $jsonResponse;
     }
 
 
     private function getResponseDoAndCheck(array $response, array $payload): array
     {
-        $responseCode = @$response['code'] != null ? ((int) $response['code'] == 0 ? 100 : (int) $response['code']) : 300;
-        $status = @$payload['phone_number'] != null ? Utilities::phoneNumberStatus($payload['phone_number'])[0] : $responseCode;
+        $responseCode = $response['code'] != null ? ((int) $response['code'] == 0 ? 100 : (int) $response['code']) : 300;
+        $phoneNumber = $payload['phone_number'] ?? null;
+        $status = $phoneNumber != null ? Utilities::phoneNumberStatus($payload['phone_number'])[0] : $responseCode;
         return [
             'status' => $status,
             'type' => 'DIRECT',
-            'transaction_id' => @$payload['transaction_id'] ?? '',
-            'partner_transaction_id' => @$payload['transaction_id'] ?? '',
-            'message' => Utilities::listStatusCode()[$status]['message'],
-            'partner_payment_id' => @$response['operator_transaction_id'] ?? '',
+            'transaction_id' => $payload['transaction_id'] ?? '',
+            'partner_transaction_id' => $payload['transaction_id'] ?? '',
+            'message' => $response['status'] ?? Utilities::listStatusCode()[$status]['message'],
+            'partner_payment_id' => $response['operator_transaction_id'] ?? '',
             'data' => [
-                'instruction' => Utilities::listStatusCode()[$status]['description']
+                'instruction' => $response['comment'] ?? Utilities::listStatusCode()[$status]['description']
             ],
             'orig_data' => $response,
         ];
@@ -179,5 +192,4 @@ class PayoutClass implements PaymentInterface
             'orig_data' => $response,
         ];
     }
-
 }

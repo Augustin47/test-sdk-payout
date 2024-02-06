@@ -26,6 +26,7 @@ class PayoutClassTest extends TestCase
         ];
 
         $result = $this->payoutClass->do($payload);
+        $this->assertIsString($payload['phone_number']);
         $this->assertIsString($result['type']);
         $this->assertSame($payload['transaction_id'], $result['transaction_id']);
         $this->assertArrayHasKey($result['status'], Utilities::listStatusCode());
@@ -43,6 +44,7 @@ class PayoutClassTest extends TestCase
             'transaction_id' => "4ae7befc-d310-408e-99a9-299205f39b7e",
         ];
         $result = $this->payoutClass->check($payload);
+        print_r($result);
         $this->assertIsString($result['type']);
         $this->assertSame($payload['transaction_id'], $result['transaction_id']);
         $this->assertArrayHasKey($result['status'], Utilities::listStatusCode());
