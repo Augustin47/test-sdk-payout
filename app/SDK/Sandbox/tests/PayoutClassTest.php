@@ -18,7 +18,7 @@ class PayoutClassTest extends TestCase
         $payload = [
             'amount' => 200,
             'otp_code' => null,
-            'phone_number' => '+2250707000201',
+            'phone_number' => '+2250707000206',
             "currency" => "XOF",
             'transaction_id' => (Str::uuid())->toString(),
             'description' => 'Merchant Payment',
@@ -44,7 +44,6 @@ class PayoutClassTest extends TestCase
             'transaction_id' => "4ae7befc-d310-408e-99a9-299205f39b7e",
         ];
         $result = $this->payoutClass->check($payload);
-        print_r($result);
         $this->assertIsString($result['type']);
         $this->assertSame($payload['transaction_id'], $result['transaction_id']);
         $this->assertArrayHasKey($result['status'], Utilities::listStatusCode());

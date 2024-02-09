@@ -70,8 +70,8 @@ class PayoutClass implements PaymentInterface
         try {
             $responseAuth = $this->connectToMagmaSendApi();
             $responseRequest = $this->request($url, $data, $responseAuth['access_token'], $method);
-            return $action != 'do-check' ? $this->getResponseBalance($responseRequest,
-                $data) : $this->getResponseDoAndCheck($responseRequest, $data);
+            return $action != 'do-check' ? $this->getResponseBalance($responseRequest) : $this->getResponseDoAndCheck($responseRequest,
+                $data);
         } catch (\Exception $e) {
             $jsonResponse = json_decode($e->getMessage(), true);
             return [
@@ -144,7 +144,7 @@ class PayoutClass implements PaymentInterface
             if ($method == 'post') {
                 $response = $client->post($url, ['json' => $payload]);
             } else {
-                $response = $client->get($url, ['query' => $payload]);
+                $response = $client->get($url);
             }
             $jsonResponse = json_decode($response->getBody(), true);
         } catch (RequestException $e) {
@@ -175,7 +175,7 @@ class PayoutClass implements PaymentInterface
         ];
     }
 
-    private function getResponseBalance(array $response, array $payload): array
+    private function getResponseBalance(array $response): array
     {
         $response['balance'] = collect($response['balance'])->where('country',
             $this->credentials['country'])->map(function ($item) {
