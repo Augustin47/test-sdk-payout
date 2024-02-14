@@ -68,6 +68,7 @@ class PayoutClassTest extends TestCase
         $this->setUp();
         $payload = [];
         $result = $this->payoutClass->balance($payload);
+        print_r($result);
         $this->assertIsString($result['type']);
         $this->assertArrayHasKey($result['status'], Utilities::listStatusCode());
 //        $this->assertArrayHasKey('balance', $result['data']);
@@ -79,8 +80,8 @@ class PayoutClassTest extends TestCase
     {
         $this->payoutClass = new PayoutClass('test_tag', [
             'base_url' => 'https://devsrv.cspay.app',
-            'app_id' => '9519602409',
-            'app_key' => '27450120',
+            'app_id' => '9612649838',
+            'app_key' => '06754043',
         ]);
     }
 }

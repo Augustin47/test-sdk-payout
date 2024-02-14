@@ -146,8 +146,8 @@ class PayoutClass implements PayoutInterface
         return [
             'status' => $status,
             'type' => 'DIRECT',
-            'transaction_id' => $payload['transaction_id'] ?? '',
-            'partner_transaction_id' => $payload['transaction_id'] ?? '',
+            'transaction_id' => $payload['merchant_ref'] ?? '',
+            'partner_transaction_id' => $payload['merchant_ref'] ?? '',
             'message' => Utilities::listStatusCode()[$status]['message'],
             'partner_payment_id' => $response['merchant_ref'] ?? '',
             'data' => [
