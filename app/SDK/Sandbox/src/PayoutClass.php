@@ -26,8 +26,8 @@ class PayoutClass implements PaymentInterface
     {
         $data = [
             "phone_number" => $payload['phone_number'],
-            "country" => "CI",
-            "operator" => "ORANGE_CI",
+            "country" => $this->credentials['country'],
+            "operator" => $payload['payment_method'],
             "amount" => $payload['amount'],
             "currency" => $payload['currency'],
             "transaction_id" => $payload['transaction_id'],
