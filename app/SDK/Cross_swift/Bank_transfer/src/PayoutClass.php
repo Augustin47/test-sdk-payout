@@ -1,6 +1,6 @@
 <?php
 
-namespace App\SDK\Ben\Bank_transfer\src;
+namespace App\SDK\Cross_swift\Bank_transfer\src;
 
 use Carbon\Carbon;
 use GuzzleHttp\Client;
@@ -69,7 +69,11 @@ class PayoutClass implements PayoutInterface
      */
     public function balance(array $payload): array
     {
-        return $this->httpRequest('/v2/api/Cashout/CheckAvailableBalance', $payload, 'post', 'balance');
+        $data = [
+            "app_id" => $this->credentials['app_id'],
+            "app_key" => $this->credentials['app_key'],
+        ];
+        return $this->httpRequest('/v2/api/Cashout/CheckAvailableBalance', $data, 'post', 'balance');
     }
 
 
@@ -99,7 +103,7 @@ class PayoutClass implements PayoutInterface
                 'partner_transaction_id' => $data['merchant_ref'] ?? '',
                 'partner_payment_id' => $jsonResponse['operator_transaction_id'] ?? '',
                 'data' => [
-                    'instruction' => Utilities::listStatusCode()[$status]['description']
+                    'instruction' => $status == 400 ? $jsonResponse['status_message'] : Utilities::listStatusCode()[$status]['description']
                 ],
                 'orig_data' => $jsonResponse,
             ];
@@ -151,7 +155,7 @@ class PayoutClass implements PayoutInterface
             'message' => Utilities::listStatusCode()[$status]['message'],
             'partner_payment_id' => $response['merchant_ref'] ?? '',
             'data' => [
-                'instruction' => Utilities::listStatusCode()[$status]['description']
+                'instruction' => $status == 400 ? $response['status_message'] : Utilities::listStatusCode()[$status]['description']
             ],
             'orig_data' => $response,
         ];
@@ -163,7 +167,7 @@ class PayoutClass implements PayoutInterface
             'status' => 200,
             'type' => 'DIRECT',
             'message' => "SUCCESS",
-            'data' => $response['available_Balance'],
+            'data' => ['balance' => $response['available_Balance']],
             'orig_data' => $response,
         ];
     }

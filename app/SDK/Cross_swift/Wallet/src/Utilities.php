@@ -1,6 +1,6 @@
 <?php
 
-namespace App\SDK\Ben\Wallet\src;
+namespace App\SDK\Cross_swift\Wallet\src;
 
 class Utilities
 {

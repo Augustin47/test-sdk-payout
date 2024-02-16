@@ -1,10 +1,10 @@
 <?php
 
 
-namespace App\SDK\Ben\Wallet\tests;
+namespace App\SDK\Cross_swift\Wallet\tests;
 
-use App\SDK\Ben\Wallet\src\PayoutClass;
-use App\SDK\Ben\Wallet\src\Utilities;
+use App\SDK\Cross_swift\Wallet\src\PayoutClass;
+use App\SDK\Cross_swift\Wallet\src\Utilities;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\TestCase;
 
@@ -14,19 +14,24 @@ class PayoutClassTest extends TestCase
 
     public function testDo()
     {
+        // MTN +233535183103
+        // AIRTELTIGO +233267598629
+        // VODAFONE +233205767493
         $this->setUp();
         $payload = [
-            'sender_name' => "Helios Oprhus",
-            'sender_mobile' => "+233264391256",
-            'receiver_name' => 'Gokus Pokus',
-            "receiver_mobile" => "+233264371234",
+            'sender_name' => "Akpagni MAGMA",
+            'sender_mobile' => "+2250789234939",
+            'receiver_name' => "OUATTARA LETICIA",
+            "receiver_mobile" => "+233205767493",
             'currency' => "GHS",
-            'amount' => '3.5',
-            'channel' => 'MTN',
+            'amount' => '1',
+            'channel' => 'VODAFONE',
             'transaction_id' => (Str::uuid())->toString(),
         ];
 
         $result = $this->payoutClass->do($payload);
+        print_r("testDo");
+        print_r($result);
         $this->assertIsString($payload['currency']);
         $this->assertIsString($payload['amount']);
         $this->assertIsString($payload['channel']);
@@ -44,9 +49,14 @@ class PayoutClassTest extends TestCase
     {
         $this->setUp();
         $payload = [
-            'transaction_id' => "4ae7befc-d310-408e-99a9-299205f39b7e",
+            'transaction_id' => "ef808917-bd45-4141-96db-9ac926a7b1d5",
+//            'transaction_id' => "fa824e56-cd2d-4716-ba05-f07550f3e1e2",
+//            'transaction_id' => "96eb9555-9ece-4fcc-a42d-b86740b63188",
+//            'transaction_id' => "101f3647-1730-4990-8800-e28d1c45ceb1",
         ];
         $result = $this->payoutClass->check($payload);
+        print_r("testCheck");
+        print_r($result);
         $this->assertIsString($result['type']);
         $this->assertSame($payload['transaction_id'], $result['transaction_id']);
         $this->assertArrayHasKey($result['status'], Utilities::listStatusCode());
@@ -61,19 +71,20 @@ class PayoutClassTest extends TestCase
         $this->setUp();
         $payload = [];
         $result = $this->payoutClass->balance($payload);
+        print_r("testBalance");
+        print_r($result);
         $this->assertIsString($result['type']);
         $this->assertArrayHasKey($result['status'], Utilities::listStatusCode());
-//        $this->assertArrayHasKey('balance', $result['data']);
-//        $this->assertArrayHasKey('currency', $result['data']);
+        $this->assertArrayHasKey('balance', $result['data']);
         $this->assertArrayHasKey('orig_data', $result);
     }
 
     protected function setUp(): void
     {
         $this->payoutClass = new PayoutClass('test_tag', [
-            'base_url' => 'https://devsrv.cspay.app/v2/api',
-            'app_id' => '9612649838',
-            'app_key' => '06754043',
+            'base_url' => 'https://api.cs-pay.app',
+            'app_id' => '1408942785',
+            'app_key' => '64337243',
         ]);
     }
 }

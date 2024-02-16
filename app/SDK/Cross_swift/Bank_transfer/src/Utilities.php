@@ -1,6 +1,6 @@
 <?php
 
-namespace App\SDK\Ben\Bank_transfer\src;
+namespace App\SDK\Cross_swift\Bank_transfer\src;
 
 class Utilities
 {
