@@ -93,7 +93,7 @@ class PayoutClass implements PayoutInterface
             $status = Utilities::phoneNumberStatus($jsonResponse['status_code']);
             return [
                 'status' => $status,
-                'type' => 'DIRECT',
+                'type' => 'MOBILE MONEY',
                 'transaction_id' => $data['merchant_ref'] ?? '',
                 'message' => Utilities::listStatusCode()[$status]['message'],
                 'partner_transaction_id' => $data['merchant_ref'] ?? '',
@@ -146,7 +146,7 @@ class PayoutClass implements PayoutInterface
         $status = Utilities::phoneNumberStatus($response['status_code']);
         return [
             'status' => $status,
-            'type' => 'DIRECT',
+            'type' => 'MOBILE MONEY',
             'transaction_id' => $payload['merchant_ref'] ?? '',
             'partner_transaction_id' => $payload['merchant_ref'] ?? '',
             'message' => Utilities::listStatusCode()[$status]['message'],
@@ -162,7 +162,7 @@ class PayoutClass implements PayoutInterface
     {
         return [
             'status' => 200,
-            'type' => 'DIRECT',
+            'type' => 'MOBILE MONEY',
             'message' => "SUCCESS",
             'data' => ['balance' => $response['available_Balance']],
             'orig_data' => $response,
