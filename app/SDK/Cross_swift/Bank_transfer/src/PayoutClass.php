@@ -5,17 +5,20 @@ namespace App\SDK\Cross_swift\Bank_transfer\src;
 use Carbon\Carbon;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
+use Illuminate\Support\Facades\Log;
 
 class PayoutClass implements PayoutInterface
 {
 
     protected string $tag;
     protected array $credentials;
+    protected string $channel;
 
     public function __construct($tag, $credentials, $channel = 'mobile_money')
     {
         $this->tag = $tag;
         $this->credentials = $credentials;
+        $this->channel = $channel;
     }
 
     /**
@@ -30,7 +33,7 @@ class PayoutClass implements PayoutInterface
             "app_key" => $this->credentials['app_key'],
             "transaction_date" => Carbon::now()->toDateTimeString(),
             "expiry_date" => Carbon::now()->addDay()->toDateTimeString(),
-            "transaction_type" => "local",
+            "transaction_type" => "LOCAL",
             "Payment_mode" => "BAT",
             "payer_name" => $payload['sender_name'],
             "payer_mobile" => $payload['sender_mobile'],
@@ -38,13 +41,14 @@ class PayoutClass implements PayoutInterface
             "Payee_mobile" => $payload['receiver_mobile'],
             "currency" => $payload['currency'],
             "amount" => $payload['amount'],
-            "bank_branch_sort_code" => $payload['receiver_bank_branch_code'],
+            "bank_branch_sort_code" => $payload['receiver_bank_branch_sort_code'],
+            "bank_code" => $payload['receiver_bank_code'],
             "Bank_name" => $payload['receiver_bank_name'],
             "Bank_account_no" => $payload['receiver_bank_account'],
             "Bank_account_title" => $payload['receiver_bank_account_title'],
             "merchant_ref" => $payload['transaction_id'],
         ];
-        return $this->httpRequest('/v2/api/Cashout/CreateCashout', $data);
+        return $this->httpRequest('/v2/api/Cashout/BankTransfer', $data);
     }
 
     /**
@@ -59,7 +63,7 @@ class PayoutClass implements PayoutInterface
             "app_key" => $this->credentials['app_key'],
             "merchant_ref" => $payload['transaction_id'],
         ];
-        return $this->httpRequest('/v2/api/Cashout/CheckStatus', $data, 'get');
+        return $this->httpRequest('/v2/api/Cashout/GetTxnStatus', $data,);
     }
 
     /**
@@ -76,6 +80,25 @@ class PayoutClass implements PayoutInterface
         return $this->httpRequest('/v2/api/Cashout/CheckAvailableBalance', $data, 'post', 'balance');
     }
 
+    /**
+     * @param  array  $payload
+     * @return array
+     * @description This method is called to check an account
+     */
+    public function checkAccount(array $payload): array|null
+    {
+        $data = [
+            "app_id" => $this->credentials['app_id'],
+            "app_key" => $this->credentials['app_key'],
+            "bank_name" => $payload['bank_name'],
+            "bank_branch_sort_code" => $payload['bank_branch_sort_code'],
+            "bank_code" => $payload['bank_code'],
+            "bank_account_no" => $payload['bank_account'],
+            "bank_account_title" => $payload['bank_account_title'],
+        ];
+        return $this->httpRequest('/v2/api/Cashout/ValidateBankAccount', $data, 'post', 'account');
+    }
+
 
     /**
      * Make an HTTP request to the Magma Send API.
@@ -86,16 +109,28 @@ class PayoutClass implements PayoutInterface
      *
      * @return array The response data from the HTTP request.
      */
-    private function httpRequest(string $url, $data = [], $method = 'post', $action = 'do_check'): array
+    private function httpRequest(string $url, $data = [], $method = 'post', $action = 'do_check'): array|null
     {
         try {
+            Log::stack([$this->channel])->info($this->tag.'[start]', [
+                'payload' => $data,
+            ]);
             $responseRequest = $this->request($url, $data, $method);
-            return $action == 'do_check' ? $this->getResponseDoAndCheck($responseRequest,
-                $data) : $this->getResponseBalance($responseRequest);
+
+            $response = match ($action) {
+                'balance' => $this->getResponseBalance($responseRequest),
+                'account' => $this->getResponseAccount($responseRequest),
+                default => $this->getResponseDoAndCheck($responseRequest,
+                    $data),
+            };
+            Log::stack([$this->channel])->info($this->tag.'[end]'.'success', [
+                'payload' => $response,
+            ]);
+            return $response;
         } catch (\Exception $e) {
             $jsonResponse = json_decode($e->getMessage(), true);
             $status = Utilities::bankTransferStatus($jsonResponse['status_code']);
-            return [
+            $response = [
                 'status' => $status,
                 'type' => 'BANK TRANSFER',
                 'transaction_id' => $data['merchant_ref'] ?? '',
@@ -107,6 +142,10 @@ class PayoutClass implements PayoutInterface
                 ],
                 'orig_data' => $jsonResponse,
             ];
+            Log::stack([$this->channel])->info($this->tag.'[end]'.'error', [
+                'payload' => $response,
+            ]);
+            return $response;
         }
     }
 
@@ -168,6 +207,20 @@ class PayoutClass implements PayoutInterface
             'type' => 'BANK TRANSFER',
             'message' => "SUCCESS",
             'data' => ['balance' => $response['available_Balance']],
+            'orig_data' => $response,
+        ];
+    }
+
+    private function getResponseAccount(array $response): null|array
+    {
+        return $response['Isvalid'] == false ? null : [
+            'status' => 200,
+            'type' => 'BANK TRANSFER',
+            'message' => "SUCCESS",
+            'data' => [
+                'name' => $response['Name'],
+                'reference' => null,
+            ],
             'orig_data' => $response,
         ];
     }

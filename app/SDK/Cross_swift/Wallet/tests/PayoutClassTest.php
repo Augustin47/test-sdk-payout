@@ -30,8 +30,6 @@ class PayoutClassTest extends TestCase
         ];
 
         $result = $this->payoutClass->do($payload);
-        print_r("testDo");
-        print_r($result);
         $this->assertIsString($payload['currency']);
         $this->assertIsString($payload['amount']);
         $this->assertIsString($payload['channel']);
@@ -55,8 +53,6 @@ class PayoutClassTest extends TestCase
 //            'transaction_id' => "101f3647-1730-4990-8800-e28d1c45ceb1",
         ];
         $result = $this->payoutClass->check($payload);
-        print_r("testCheck");
-        print_r($result);
         $this->assertIsString($result['type']);
         $this->assertSame($payload['transaction_id'], $result['transaction_id']);
         $this->assertArrayHasKey($result['status'], Utilities::listStatusCode());
@@ -71,11 +67,24 @@ class PayoutClassTest extends TestCase
         $this->setUp();
         $payload = [];
         $result = $this->payoutClass->balance($payload);
-        print_r("testBalance");
-        print_r($result);
         $this->assertIsString($result['type']);
         $this->assertArrayHasKey($result['status'], Utilities::listStatusCode());
         $this->assertArrayHasKey('balance', $result['data']);
+        $this->assertArrayHasKey('orig_data', $result);
+    }
+
+    public function testAccount()
+    {
+        $this->setUp();
+        $payload = [
+            "phone_number" => "+233535183103",
+            "phone_operator" => "MTN",
+        ];
+        $result = $this->payoutClass->checkAccount($payload);
+        $this->assertIsString($result['type']);
+        $this->assertArrayHasKey($result['status'], Utilities::listStatusCode());
+        $this->assertArrayHasKey('name', $result['data']);
+        $this->assertArrayHasKey('reference', $result['data']);
         $this->assertArrayHasKey('orig_data', $result);
     }
 

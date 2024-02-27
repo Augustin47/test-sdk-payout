@@ -22,7 +22,8 @@ class PayoutClassTest extends TestCase
             "receiver_mobile" => "+233535183103",
             'currency' => "GHS",
             'amount' => '2',
-            'receiver_bank_branch_code' => "130116",
+            'receiver_bank_branch_sort_code' => "130149",
+            'receiver_bank_code' => "300312",
             'receiver_bank_name' => "Ecobank Ghana",
             'receiver_bank_account' => "1441004602059",
             'receiver_bank_account_title' => "MARIAM LETICIA OUATTARA MERESSO YAO",
@@ -30,11 +31,9 @@ class PayoutClassTest extends TestCase
         ];
 
         $result = $this->payoutClass->do($payload);
-        print_r("testDo");
-        print_r($result);
         $this->assertIsString($payload['currency']);
         $this->assertIsString($payload['amount']);
-        $this->assertIsString($payload['receiver_bank_branch_code']);
+        $this->assertIsString($payload['receiver_bank_branch_sort_code']);
         $this->assertIsString($payload['receiver_bank_account']);
         $this->assertIsString($payload['receiver_bank_account_title']);
         $this->assertIsString($payload['transaction_id']);
@@ -51,11 +50,11 @@ class PayoutClassTest extends TestCase
     {
         $this->setUp();
         $payload = [
-            'transaction_id' => "645e2d3e-1647-481b-8f12-65c8f4db864f",
+            'transaction_id' => "e6491c6b-2689-4207-9534-69c641b0d720",
+//            'transaction_id' => "645e2d3e-1647-481b-8f12-65c8f4db864f",
+//            'transaction_id' => "89b45787-24f1-4adc-8f6d-bef25a4f4d5f",
         ];
         $result = $this->payoutClass->check($payload);
-        print_r("testCheck");
-        print_r($result);
         $this->assertIsString($result['type']);
         $this->assertSame($payload['transaction_id'], $result['transaction_id']);
         $this->assertArrayHasKey($result['status'], Utilities::listStatusCode());
@@ -70,11 +69,27 @@ class PayoutClassTest extends TestCase
         $this->setUp();
         $payload = [];
         $result = $this->payoutClass->balance($payload);
-        print_r("testBalance");
-        print_r($result);
         $this->assertIsString($result['type']);
         $this->assertArrayHasKey($result['status'], Utilities::listStatusCode());
         $this->assertArrayHasKey('balance', $result['data']);
+        $this->assertArrayHasKey('orig_data', $result);
+    }
+
+    public function testAccount()
+    {
+        $this->setUp();
+        $payload = [
+            "bank_name" => "Ecobank Ghana",
+            "bank_branch_sort_code" => "130149",
+            "bank_code" => "300312",
+            "bank_account" => "1441004602059",
+            "bank_account_title" => "MARIAM LETICIA OUATTARA MERESSO YAO",
+        ];
+        $result = $this->payoutClass->checkAccount($payload);
+        $this->assertIsString($result['type']);
+        $this->assertArrayHasKey($result['status'], Utilities::listStatusCode());
+        $this->assertArrayHasKey('name', $result['data']);
+        $this->assertArrayHasKey('reference', $result['data']);
         $this->assertArrayHasKey('orig_data', $result);
     }
 

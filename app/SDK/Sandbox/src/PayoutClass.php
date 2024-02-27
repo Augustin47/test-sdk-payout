@@ -10,11 +10,13 @@ class PayoutClass implements PaymentInterface
 
     protected string $tag;
     protected array $credentials;
+    protected string $channel;
 
     public function __construct($tag, $credentials, $channel = 'mobile_money')
     {
         $this->tag = $tag;
         $this->credentials = $credentials;
+        $this->channel = $channel;
     }
 
     /**
