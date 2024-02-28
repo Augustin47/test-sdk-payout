@@ -12,7 +12,7 @@ class PayoutClass implements PayoutInterface
 
     protected string $tag;
     protected array $credentials;
-    protected string $channel;
+    protected $channel;
 
     public function __construct($tag, $credentials, $channel = 'mobile_money')
     {
