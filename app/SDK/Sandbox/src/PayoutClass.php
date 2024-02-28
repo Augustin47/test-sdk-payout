@@ -4,13 +4,14 @@ namespace App\SDK\Sandbox\src;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
+use Illuminate\Support\Facades\Log;
 
 class PayoutClass implements PaymentInterface
 {
 
     protected string $tag;
     protected array $credentials;
-    protected string $channel;
+    protected $channel;
 
     public function __construct($tag, $credentials, $channel = 'mobile_money')
     {
@@ -70,13 +71,20 @@ class PayoutClass implements PaymentInterface
     private function httpRequest(string $url, $data = [], $action = 'do-check', $method = 'post',): array
     {
         try {
+            Log::stack([$this->channel])->info($this->tag.'[start]', [
+                'payload' => $data,
+            ]);
             $responseAuth = $this->connectToMagmaSendApi();
             $responseRequest = $this->request($url, $data, $responseAuth['access_token'], $method);
-            return $action != 'do-check' ? $this->getResponseBalance($responseRequest) : $this->getResponseDoAndCheck($responseRequest,
+            $response = $action != 'do-check' ? $this->getResponseBalance($responseRequest) : $this->getResponseDoAndCheck($responseRequest,
                 $data);
+            Log::stack([$this->channel])->info($this->tag.'[end]'.'success', [
+                'payload' => $response,
+            ]);
+            return $response;
         } catch (\Exception $e) {
             $jsonResponse = json_decode($e->getMessage(), true);
-            return [
+            $response = [
                 'status' => $jsonResponse['code'] ?? 300,
                 'type' => 'DIRECT',
                 'transaction_id' => $data['transaction_id'] ?? '',
@@ -88,6 +96,10 @@ class PayoutClass implements PaymentInterface
                 ],
                 'orig_data' => $jsonResponse,
             ];
+            Log::stack([$this->channel])->info($this->tag.'[end]'.'error', [
+                'payload' => $response,
+            ]);
+            return $response;
         }
     }
 
